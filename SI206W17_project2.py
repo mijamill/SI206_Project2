@@ -78,29 +78,43 @@ def find_urls(input_string):
 def get_umsi_data():
 	umsi_key = 	"umsi_directory_data"
 	if umsi_key in CACHE_DICTION:
-		umsi_data = CACHE_DICTION[umsi_key]
+		html_strings = CACHE_DICTION[umsi_key]
 	else:
 		base_url = "https://www.si.umich.edu/directory?field_person_firstname_value=&field_person_lastname_value=&rid=All"
 		base_url_loop = "https://www.si.umich.edu/directory?field_person_firstname_value=&field_person_lastname_value=&rid=All&page="
-
+		html_strings = []
 		html_text = requests.get(base_url, headers={'User-Agent': 'SI_CLASS'}).text
-
+		html_strings.append(html_text)
+		for x in range(1, 12):
+			html_text = requests.get(base_url_loop + str(x), headers={'User-Agent': 'SI_CLASS'}).text
+			html_strings.append(html_text)
+		CACHE_DICTION[umsi_key] = html_strings
 		f = open(CACHE_FNAME,'w', encoding = 'utf-8') 
 		f.write(json.dumps(CACHE_DICTION))
 		f.close()
-	# Now takes results from if-else statement, stores tweets in tweet_texts to return for printing
-	tweet_texts = []
-	for tweet in twitter_results:
-		tweet_texts.append(tweet)
-	return tweet_texts[:3]
+
+	return html_strings
 
 
 
 ## PART 2 (b) - Create a dictionary saved in a variable umsi_titles 
 ## whose keys are UMSI people's names, and whose associated values are those people's titles, e.g. "PhD student" or "Associate Professor of Information"...
+htmldoc = get_umsi_data()
 
+umsi_titles = {}
+umsi_titles_add = {}
+names = []
+titles = []
 
+for html_string in htmldoc:
+	soup = BeautifulSoup(html_string,"html.parser")
+	for name in soup.find_all(class_="field field-name-title field-type-ds field-label-hidden"):
+		names.append(name.text)
+	for title in soup.find_all(class_="field field-name-field-person-titles field-type-text field-label-hidden"):
+		titles.append(title.text)
 
+	umsi_titles_add = dict(zip(names, titles))
+	umsi_titles.update(umsi_titles_add)
 
 
 
